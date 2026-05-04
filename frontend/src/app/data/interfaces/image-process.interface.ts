@@ -1,11 +1,11 @@
 import { DatePipeConfig } from "@angular/common";
 
 export interface ImageProcess {
-  _id?: string;
+  id: string;
   urlOriginal: string;
   urlResultado: string;
   imagenBinaria: string;
   tipoServicio: string;
-  fechaCreacion?: DatePipeConfig;
-  activo: boolean;
+  fechaCreacion?: string;
+  activo?: boolean;
 }

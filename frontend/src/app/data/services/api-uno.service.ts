@@ -29,12 +29,13 @@ export class ApiUnoService {
     return this.http.post<ImageProcess>(`${this.URL}/convertir-anime?url=${url}`, {});
   }
 
-  updateRecord(id: string, data: ImageProcess): Observable<ImageProcess> {
-    return this.http.put<ImageProcess>(`${this.URL}/actualizar/${id}`, data);
+  updateRecord(id: string | undefined, data: ImageProcess): Observable<any> {
+    if (!id) throw new Error("ID no proporcionado");
+    return this.http.put(`${this.URL}/editar/${id}`, data);
   }
 
-  deleteLogico(id: string): Observable<any> {
-    // Usamos DELETE porque así lo definimos en el controlador de Java
-    return this.http.delete(`${this.URL}/eliminar/${id}`);
+  deleteLogico(id: string | undefined): Observable<any> {
+    if (!id) throw new Error("ID no proporcionado");
+    return this.http.patch(`${this.URL}/eliminar/${id}`, {});
   }
 }
