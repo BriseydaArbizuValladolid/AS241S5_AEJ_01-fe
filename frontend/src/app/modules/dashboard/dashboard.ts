@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { ApiUnoService } from '../../data/services/api-uno.service';
 import { ImageProcess } from '../../data/interfaces/image-process.interface';
 
@@ -11,10 +12,9 @@ import { ImageProcess } from '../../data/interfaces/image-process.interface';
   styleUrl: './dashboard.scss',
 })
 export class DashboardComponent implements OnInit {
-  // Inyectamos solo el servicio principal
   private apiService = inject(ApiUnoService);
+  private sanitizer = inject(DomSanitizer);
 
-  // Estados reactivos con Signals
   public listado = signal<ImageProcess[]>([]);
   public cargando = signal<boolean>(false);
   public mensajeStatus = signal<string>('');
@@ -23,91 +23,103 @@ export class DashboardComponent implements OnInit {
     this.obtenerHistorial();
   }
 
-  // LISTAR: Obtiene los registros (el backend filtrará los activos: true)
+  // Sanea URLs externas (Originales)
+  // En dashboard.component.ts
+
+limpiarUrl(url: string | undefined): SafeUrl {
+  if (!url || url.length < 5) return '';
+
+  const servidorBase = 'https://congenial-disco-x59gjxprqp763pr9-8080.app.github.dev';
+  let urlFinal = url;
+
+  // Si la URL empieza con /api (tanto para original como resultado), le ponemos el servidor
+  if (url.startsWith('/api')) {
+    urlFinal = `${servidorBase}${url}`;
+  }
+  // Si no empieza con http ni con /api, asumimos que es un nombre de archivo viejo
+  else if (!url.startsWith('http')) {
+    urlFinal = `${servidorBase}/api/v1/ia/ver-imagen-original/${url}`;
+  }
+
+  return this.sanitizer.bypassSecurityTrustUrl(urlFinal);
+}
+
   obtenerHistorial() {
-    this.cargando.set(true);
-    this.apiService.getHistory().subscribe({
-      next: (data) => {
-        this.listado.set(data);
+  this.cargando.set(true);
+  this.apiService.getHistory().subscribe({
+    next: (data) => {
+      // Forzamos que todos los items tengan activo = true al llegar al front
+      const listaForzada = data.map(item => ({ ...item, activo: true }));
+      this.listado.set(listaForzada);
+      this.cargando.set(false);
+    },
+    error: () => this.manejarError('Error al cargar historial')
+  });
+}
+
+  // --- MÉTODOS DE ACCIÓN ---
+
+  editar(item: ImageProcess) {
+    const nuevoTipo = prompt('Editar tipo de servicio:', item.tipoServicio);
+    if (nuevoTipo && item._id) {
+      this.cargando.set(true);
+      // Enviamos el objeto completo como espera tu @RequestBody ApiModel
+      const actualizado: ImageProcess = { ...item, tipoServicio: nuevoTipo };
+
+      this.apiService.updateRecord(item._id, actualizado).subscribe({
+        next: () => {
+          this.obtenerHistorial(); // Refrescamos para ver cambios
+          this.mensajeStatus.set('Registro actualizado');
+        },
+        error: () => this.manejarError('No se pudo actualizar')
+      });
+    }
+  }
+
+  eliminar(id?: string) {
+  if (!id) return;
+
+  if (confirm('¿Deseas eliminar este registro?')) {
+    this.apiService.deleteLogico(id).subscribe({
+      next: () => {
+        // Cambiamos item.id por item._id
+        this.listado.update(lista => lista.filter(item => item._id !== id));
         this.cargando.set(false);
       },
-      error: (err: any) => {
-        console.error('Error al traer historial de MongoDB', err);
+      error: (err) => {
+        console.error("Error al eliminar", err);
         this.cargando.set(false);
       }
     });
   }
-
-  // CREATE: Procesar remover fondo (con archivo)
-  procesarFondo(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files[0]) {
+}
+  // Métodos de procesamiento (Fondo y Anime)
+  procesarFondo(event: any) {
+    const file = event.target.files[0];
+    if (file) {
       this.cargando.set(true);
       this.mensajeStatus.set('Removiendo fondo...');
-
-      this.apiService.removeBackground(input.files[0]).subscribe({
-        next: () => {
-          this.obtenerHistorial(); // Refrescamos la lista para ver el nuevo registro
-          this.mensajeStatus.set('Fondo removido con éxito');
-        },
-        error: (err) => this.manejarError(err)
+      this.apiService.removeBackground(file).subscribe({
+        next: () => this.obtenerHistorial(),
+        error: () => this.manejarError('Error en proceso de fondo')
       });
     }
   }
 
-  // CREATE: Procesar animación (con URL)
   procesarAnimacion() {
-    const url = prompt('Ingresa la URL de la imagen para animar:');
+    const url = prompt('URL de la imagen:');
     if (url) {
       this.cargando.set(true);
-      this.mensajeStatus.set('Convirtiendo a anime...');
-
       this.apiService.convertToAnime(url).subscribe({
-        next: (res) => {
-          this.listado.update(actual => [res, ...actual]);
-          this.cargando.set(false);
-          this.mensajeStatus.set('¡Animación completada!');
-        },
-        error: (err) => this.manejarError(err)
+        next: () => this.obtenerHistorial(),
+        error: () => this.manejarError('Error en efecto anime')
       });
     }
   }
 
-  // UPDATE: Editar un registro existente
-  editar(item: ImageProcess) {
-    const nuevoTipo = prompt('Editar tipo de servicio:', item.tipoServicio);
-    if (nuevoTipo && item._id) {
-      this.apiService.updateRecord(item._id, { tipoServicio: nuevoTipo }).subscribe({
-        next: (actualizado) => {
-          // Actualizamos localmente el signal
-          this.listado.update(actual =>
-            actual.map(i => i._id === actualizado._id ? actualizado : i)
-          );
-          this.mensajeStatus.set('Registro actualizado');
-        },
-        error: (err) => this.manejarError(err)
-      });
-    }
-  }
-
-  // DELETE: Borrado Lógico
-  eliminar(id?: string) {
-    if (!id) return;
-    if (confirm('¿Estás seguro de enviar este registro a la papelera (Borrado Lógico)?')) {
-      this.apiService.deleteLogico(id).subscribe({
-        next: () => {
-          // Filtramos del signal para que desaparezca de la vista inmediatamente
-          this.listado.update(actual => actual.filter(item => item._id !== id));
-          this.mensajeStatus.set('Registro desactivado correctamente');
-        },
-        error: (err: any) => console.error('Error al eliminar', err)
-      });
-    }
-  }
-
-  private manejarError(err: any) {
-    console.error('Error en el proceso:', err);
+  private manejarError(msg: string) {
     this.cargando.set(false);
-    this.mensajeStatus.set('Ocurrió un error. Revisa la consola.');
+    this.mensajeStatus.set(msg);
+    setTimeout(() => this.mensajeStatus.set(''), 3000);
   }
 }

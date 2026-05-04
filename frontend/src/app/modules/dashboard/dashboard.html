@@ -1,0 +1,105 @@
+<div class="dashboard-container">
+  <div class="header-status">
+    <div class="title-group">
+      <h2>IA Dashboard <small>v2.0 - MongoDB + Spring</small></h2>
+      <p class="subtitle">Gestión de procesamiento de imágenes</p>
+    </div>
+
+    <div class="status-indicator" *ngIf="cargando() || mensajeStatus()">
+      <div class="spinner" *ngIf="cargando()"></div>
+      <span class="status-text">{{ mensajeStatus() }}</span>
+    </div>
+  </div>
+
+  <div class="actions-grid">
+    <div class="action-card">
+      <span class="material-icons main-icon">auto_fix_high</span>
+      <h3>Efecto Anime</h3>
+      <p>Transforma imágenes mediante una URL externa.</p>
+      <button class="btn-anime" (click)="procesarAnimacion()" [disabled]="cargando()">
+        <span class="material-icons">link</span> Procesar URL
+      </button>
+    </div>
+
+    <div class="action-card">
+      <span class="material-icons main-icon">content_cut</span>
+      <h3>Remover Fondo</h3>
+      <p>Carga un archivo local para procesar.</p>
+      <label class="btn-upload" [class.disabled]="cargando()">
+        <span class="material-icons">cloud_upload</span> Subir Imagen
+        <input type="file" (change)="procesarFondo($event)" hidden accept="image/*" [disabled]="cargando()">
+      </label>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <h3><span class="material-icons">history</span> Historial de Procesamiento</h3>
+      <button class="btn-refresh" (click)="obtenerHistorial()" [disabled]="cargando()" title="Actualizar">
+        <span class="material-icons" [class.spinning]="cargando()">refresh</span>
+      </button>
+    </div>
+
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Original</th>
+            <th>Resultado IA</th>
+            <th>Servicio</th>
+            <th>Estado</th> <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+  <tr *ngFor="let item of listado()">
+    <td>
+  <div class="img-frame">
+    <img [src]="limpiarUrl(item.urlOriginal)"
+         referrerpolicy="no-referrer"
+         loading="lazy"
+         *ngIf="item.urlOriginal"
+         alt="Original">
+  </div>
+</td>
+
+<td>
+  <div class="img-frame result">
+    <img [src]="limpiarUrl(item.urlResultado)"
+         referrerpolicy="no-referrer"
+         crossorigin="anonymous"
+         *ngIf="item.urlResultado && item.urlResultado.length > 5"
+         alt="Resultado">
+
+    <div class="error-msg" *ngIf="item.urlResultado && item.urlResultado.length <= 5">
+       {{ item.urlResultado }}
+    </div>
+  </div>
+</td>
+
+    <td><span class="tag">{{ item.tipoServicio }}</span></td>
+
+    <td>
+      <span class="status-badge" [ngClass]="item.activo ? 'active' : 'inactive'">
+        {{ item.activo ? 'Activo' : 'Inactivo' }}
+      </span>
+    </td>
+
+    <td class="btn-group">
+      <button class ="btn-icon edit" (click)="editar(item)">
+        <span class="material-icons">edit</span>
+      </button>
+      <button class="btn-icon delete" (click)="eliminar(item._id)">
+        <span class="material-icons">delete</span>
+      </button>
+    </td>
+  </tr>
+</tbody>
+      </table>
+
+      <div class="empty-state" *ngIf="listado().length === 0 && !cargando()">
+        <span class="material-icons">storage</span>
+        <p>No hay registros disponibles en MongoDB.</p>
+      </div>
+    </div>
+  </div>
+</div>

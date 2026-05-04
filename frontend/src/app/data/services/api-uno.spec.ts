@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 
-import { ApiUno } from './api-uno';
+import { ApiUnoService } from './api-uno.service';
 
 describe('ApiUno', () => {
-  let service: ApiUno;
+  let service: ApiUnoService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(ApiUno);
+    service = TestBed.inject(ApiUnoService);
   });
 
   it('should be created', () => {

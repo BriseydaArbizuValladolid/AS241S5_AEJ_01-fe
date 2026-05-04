@@ -7,4 +7,5 @@ export interface ImageProcess {
   imagenBinaria: string;
   tipoServicio: string;
   fechaCreacion?: DatePipeConfig;
+  activo: boolean;
 }

@@ -9,9 +9,12 @@ import { ImageProcess } from '../interfaces/image-process.interface';
 export class ApiUnoService {
   private http = inject(HttpClient);
 
-  // USA LA IP QUE TE FUNCIONÓ EN EL CURL
+  // Reemplaza con tu URL actual de la pestaña PORTS (puerto 8080)
   private readonly URL = 'https://congenial-disco-x59gjxprqp763pr9-8080.app.github.dev/api/v1/ia';
 
+  getBaseUrl(): string {
+  return 'https://congenial-disco-x59gjxprqp763pr9-8080.app.github.dev';
+}
   getHistory(): Observable<ImageProcess[]> {
     return this.http.get<ImageProcess[]>(`${this.URL}/listar`);
   }
@@ -26,14 +29,12 @@ export class ApiUnoService {
     return this.http.post<ImageProcess>(`${this.URL}/convertir-anime?url=${url}`, {});
   }
 
-  // --- ESTOS SON LOS QUE FALTAN SEGÚN TU IMAGEN ---
-
-  updateRecord(id: string, data: Partial<ImageProcess>): Observable<ImageProcess> {
+  updateRecord(id: string, data: ImageProcess): Observable<ImageProcess> {
     return this.http.put<ImageProcess>(`${this.URL}/actualizar/${id}`, data);
   }
 
   deleteLogico(id: string): Observable<any> {
-    // Llamamos al endpoint de desactivar que creamos en Java
-    return this.http.put(`${this.URL}/desactivar/${id}`, {});
+    // Usamos DELETE porque así lo definimos en el controlador de Java
+    return this.http.delete(`${this.URL}/eliminar/${id}`);
   }
 }
