@@ -1,1 +1,14 @@
-/* You can add global styles to this file, and also import other style files */
+// src/styles.scss
+
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100%;
+  height: 100%;
+  background-color: #0f172a; // Tu color $bg-deep
+}
+
+// Esto elimina cualquier espacio extra que Angular o el navegador pongan
+* {
+  box-sizing: border-box;
+}

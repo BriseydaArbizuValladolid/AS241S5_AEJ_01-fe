@@ -20,78 +20,85 @@ export class DashboardComponent implements OnInit {
   public cargando = signal<boolean>(false);
   public mostrarModal = false;
   public itemSeleccionado: ImageProcess | null = null;
+  public imagenZoom: ImageProcess | null = null; // Control del Lightbox
 
   ngOnInit(): void {
     this.obtenerHistorial();
   }
 
+  // --- LÓGICA DE VISUALIZACIÓN ---
+  verImagenGrande(item: ImageProcess) {
+    this.imagenZoom = item;
+  }
+
+  cerrarZoom() {
+    this.imagenZoom = null;
+  }
+
+// --- SERVICIOS API ---
   obtenerHistorial() {
     this.cargando.set(true);
     this.apiService.getHistory().subscribe({
       next: (data) => {
-        this.listado.set(data);
+        // TRUCO DE CONTROL: Creamos una copia nueva del array.
+        // Esto rompe la referencia vieja en memoria y obliga al Signal a redibujar el HTML.
+        this.listado.set([...data]);
         this.cargando.set(false);
       },
       error: () => this.cargando.set(false)
     });
   }
 
-  abrirModal(item: ImageProcess) {
-  this.itemSeleccionado = { ...item }; // Creamos una copia limpia
-  this.mostrarModal = true;
-}
+  // --- MÉTODO DE ELIMINADO LÓGICO ---
+  eliminar(id: string | undefined) {
+    if (!id) return;
 
-  cerrarModal() {
-    this.mostrarModal = false;
-    this.itemSeleccionado = null;
-  }
-
-  limpiarUrl(url: string | undefined, id: string | undefined): SafeUrl {
-  // Si no hay ID, devolvemos una imagen por defecto para evitar errores de consola
-  if (!id) return 'assets/placeholder.png';
-
-  // Si la URL es de Background Remover (ruta de archivo) o no existe, usamos el endpoint de ver-imagen
-  if (!url || !url.startsWith('http')) {
-    const baseJava = 'https://congenial-disco-x59gjxprqp763pr9-8080.app.github.dev/api/v1/ia';
-    // Usamos el endpoint que SÍ te funcionaba antes para mostrar el resultado
-    return this.sanitizer.bypassSecurityTrustUrl(`${baseJava}/ver-imagen/${id}`);
-  }
-
-  // Si es una URL externa (Anime), se muestra directo
-  return this.sanitizer.bypassSecurityTrustUrl(url);
-}
-// Asegúrate de que el método acepte string
-eliminar(id: string) {
-  if (!id) return; // Validación extra
-  if (confirm('¿Deseas inactivar este registro?')) {
     this.cargando.set(true);
     this.apiService.deleteLogico(id).subscribe({
-      next: () => this.obtenerHistorial(),
-      error: () => this.cargando.set(false)
+      next: (res) => {
+        console.log('¡Confirmado por el Backend en DB!', res);
+
+        // SOLO si el servidor guardó con éxito, actualizamos la interfaz
+        this.listado.update(listaActual =>
+          listaActual.map(item => item.id === id ? { ...item, activo: false } : item)
+        );
+
+        this.cargando.set(false);
+      },
+      error: (err) => {
+        console.error('Error: El backend rechazó la eliminación:', err);
+        alert('No se pudo guardar el cambio en la base de datos.');
+        this.cargando.set(false);
+      }
     });
   }
-}
 
-guardarEdicion() {
-  // Validamos que itemSeleccionado y su id existan
-  if (!this.itemSeleccionado || !this.itemSeleccionado.id) return;
-
-  this.cargando.set(true);
-  this.apiService.updateRecord(this.itemSeleccionado.id, this.itemSeleccionado).subscribe({
-    next: () => {
-      this.cerrarModal();
-      this.obtenerHistorial();
-    },
-    error: (err) => {
-      console.error("Sigue dando 404. Revisa el /{id} en tu Java Controller", err);
-      this.cargando.set(false);
-    }
-  });
-}
+  // --- MÉTODO PARA RESTAURAR ---
   restaurar(id: string | undefined) {
     if (!id) return;
+
     this.cargando.set(true);
-    this.apiService.updateRecord(id, { activo: true } as any).subscribe({
+    this.apiService.restoreRecord(id).subscribe({
+      next: (res) => {
+        console.log('¡Confirmado por el Backend en DB!', res);
+
+        // SOLO si el servidor guardó con éxito, actualizamos la interfaz
+        this.listado.update(listaActual =>
+          listaActual.map(item => item.id === id ? { ...item, activo: true } : item)
+        );
+
+        this.cargando.set(false);
+      },
+      error: (err) => {
+        console.error('Error: El backend rechazó la restauración:', err);
+        this.cargando.set(false);
+      }
+    });
+  }
+  procesarAnimacion(url: string) {
+    if (!url?.trim()) return alert('URL no válida');
+    this.cargando.set(true);
+    this.apiService.convertToAnime(url).subscribe({
       next: () => this.obtenerHistorial(),
       error: () => this.cargando.set(false)
     });
@@ -108,14 +115,67 @@ guardarEdicion() {
     }
   }
 
-  procesarAnimacion() {
-    const url = prompt('URL de imagen:');
-    if (url) {
-      this.cargando.set(true);
-      this.apiService.convertToAnime(url).subscribe({
-        next: () => this.obtenerHistorial(),
-        error: () => this.cargando.set(false)
-      });
-    }
+
+  abrirModal(item: ImageProcess) {
+    this.itemSeleccionado = { ...item };
+    this.mostrarModal = true;
   }
+
+  cerrarModal() {
+    this.mostrarModal = false;
+    this.itemSeleccionado = null;
+  }
+
+  // --- MÉTODO PARA GUARDAR LA EDICIÓN ---
+guardarEdicion() {
+    if (!this.itemSeleccionado || !this.itemSeleccionado.id) return;
+
+    this.cargando.set(true);
+
+    // Guardamos una copia local de lo que el usuario editó en el modal
+    const datosEditados = { ...this.itemSeleccionado };
+
+    this.apiService.updateRecord(datosEditados.id!, datosEditados).subscribe({
+      next: (res: ImageProcess) => {
+        console.log('¡Edición guardada con éxito por el Backend!', res);
+
+        // ACTUALIZACIÓN REACTIVA INMEDIATA:
+        // Buscamos el elemento modificado y le inyectamos los nuevos datos
+        // manteniendo los valores previos para no perder nada.
+        this.listado.update(listaActual =>
+          listaActual.map(item =>
+            item.id === datosEditados.id
+              ? { ...item, tipoServicio: datosEditados.tipoServicio, urlResultado: datosEditados.urlResultado }
+              : item
+          )
+        );
+
+        this.cargando.set(false);
+        this.cerrarModal(); // Cerramos el modal de forma limpia
+      },
+      error: (err: any) => {
+        console.error('Error al intentar editar el registro:', err);
+        alert('Ocurrió un problema al guardar los cambios en la base de datos.');
+        this.cargando.set(false);
+      }
+    });
+  }
+limpiarUrl(item: any): SafeUrl {
+  if (!item) return 'assets/placeholder.png';
+
+  if (item.urlResultado && item.urlResultado.startsWith('http')) {
+    return this.sanitizer.bypassSecurityTrustUrl(item.urlResultado);
+  }
+
+  if (item.urlResultado === 'Error') {
+    return 'assets/image-error.png';
+  }
+
+  const base = this.apiService.getBaseUrl();
+  const urlFinal = item.urlResultado.startsWith('/')
+                   ? `${base}${item.urlResultado}`
+                   : `${base}/api/v1/ia/ver-imagen/${item.id}`;
+
+  return this.sanitizer.bypassSecurityTrustUrl(urlFinal);
+}
 }

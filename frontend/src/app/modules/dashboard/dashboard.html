@@ -1,85 +1,154 @@
 <div class="dashboard-container">
-  <div class="header-status">
+  <header class="header-status">
     <div class="title-group">
       <h2>IA Dashboard <small>v2.0</small></h2>
+      <p class="subtitle">Procesamiento de imágenes con IA</p>
     </div>
-    <div *ngIf="cargando()" class="spinning material-icons">refresh</div>
-  </div>
+    <div *ngIf="cargando()" class="loading-wrapper">
+      <span class="spinning material-icons">sync</span>
+      <span>Procesando...</span>
+    </div>
+  </header>
 
-  <div class="actions-grid">
+  <section class="main-actions">
     <div class="action-card">
-      <span class="material-icons main-icon">auto_fix_high</span>
-      <h3>Anime</h3>
-      <button class="btn-anime" (click)="procesarAnimacion()">Procesar URL</button>
-    </div>
-    <div class="action-card">
-      <span class="material-icons main-icon">content_cut</span>
-      <h3>Fondo</h3>
-      <label class="btn-upload">Subir Archivo<input type="file" (change)="procesarFondo($event)" hidden/></label>
-    </div>
-  </div>
-
-  <div class="table-card">
-    <table>
-      <thead>
-        <tr>
-          <th>Original</th>
-          <th>Resultado</th>
-          <th>Servicio</th>
-          <th>Estado</th>
-          <th class="text-center">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let item of listado()">
-          <td><div class="img-frame"><img [src]="limpiarUrl(item?.urlOriginal, item?.id || '')"></div></td>
-          <td><div class="img-frame"><img [src]="limpiarUrl(item?.urlResultado, item?.id || '')"></div></td>
-
-          <td><span class="tag">{{ item?.tipoServicio }}</span></td>
-
-          <td>
-            <span class="status-badge" [ngClass]="item?.activo !== false ? 'active' : 'inactive'">
-              {{ item?.activo !== false ? 'Activo' : 'Inactivo' }}
-            </span>
-          </td>
-
-          <td class="text-center">
-            <div class="btn-group" *ngIf="item?.activo !== false">
-              <button class="btn-icon edit" (click)="abrirModal(item)">
-                <span class="material-icons">edit</span>
-              </button>
-              <button class="btn-icon delete" (click)="eliminar(item?.id || '')">
-                <span class="material-icons">delete</span>
-              </button>
-            </div>
-
-            <div *ngIf="item?.activo === false">
-              <button class="btn-icon restore" (click)="restaurar(item?.id || '')">
-                <span class="material-icons">settings_backup_restore</span>
-              </button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="custom-overlay" *ngIf="mostrarModal && itemSeleccionado">
-    <div class="custom-modal">
-      <h3>Editar Registro</h3>
-      <p class="id-label">ID: {{ itemSeleccionado.id }}</p>
-
-      <div class="form-group">
-        <label>Tipo de Servicio:</label>
-        <select [(ngModel)]="itemSeleccionado.tipoServicio" class="full-select">
-          <option value="BACKGROUND_REMOVER">BACKGROUND_REMOVER</option>
-          <option value="PHOTO_TO_ANIME">PHOTO_TO_ANIME</option>
-        </select>
+      <div class="card-glow"></div>
+      <span class="material-icons card-icon">auto_fix_high</span>
+      <h3>Efecto Anime</h3>
+      <div class="input-group-modern">
+        <input type="text" #urlInput placeholder="Pegar URL de imagen..." />
+        <button (click)="procesarAnimacion(urlInput.value)">
+          <span class="material-icons">bolt</span>
+        </button>
       </div>
+    </div>
 
-      <div class="modal-footer">
-        <button class="btn-sec" (click)="cerrarModal()">Cancelar</button>
-        <button class="btn-pri" (click)="guardarEdicion()">Confirmar Cambios</button>
+    <div class="action-card">
+      <div class="card-glow"></div>
+      <span class="material-icons card-icon">content_cut</span>
+      <h3>Sin Fondo</h3>
+      <label class="file-dropzone">
+        <input type="file" (change)="procesarFondo($event)" hidden />
+        <span class="material-icons">cloud_upload</span>
+        <span class="label-text">Subir Archivo</span>
+      </label>
+    </div>
+  </section>
+
+  <section class="history-section">
+    <div class="h-title">
+      <span class="material-icons">history</span>
+      <h3>Historial</h3>
+    </div>
+
+    <div class="table-container">
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th>Resultado</th>
+            <th>Servicio</th>
+            <th>Estado</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of listado()" [class.is-deleted]="item?.activo === false">
+            <td>
+              <div class="result-preview-container" (click)="verImagenGrande(item)">
+                <img [src]="limpiarUrl(item)" class="main-result-img" />
+                <div class="hover-overlay">
+                  <span class="material-icons">visibility</span>
+                  <p>Expandir</p>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="service-chip" [attr.data-type]="item?.tipoServicio">
+                {{ item?.tipoServicio === 'PHOTO_TO_ANIME' ? 'PHOTO_TO_ANIME' : 'BACKGROUND_REMOVER' }}
+              </span>
+            </td>
+            <td>
+              <div class="status-indicator" [class.active]="item?.activo !== false">
+                <span class="dot"></span>
+                {{ item?.activo !== false ? 'Activo' : 'Inactivo' }}
+              </div>
+            </td>
+            <td class="text-center">
+              <div class="action-btns">
+                <ng-container *ngIf="item?.activo !== false; else deletedTpl">
+                  <button class="btn-circle edit" (click)="abrirModal(item)">
+                    <span class="material-icons">edit</span>
+                  </button>
+                  <button class="btn-circle delete" (click)="eliminar(item.id!)">
+                    <span class="material-icons">delete</span>
+                  </button>
+                </ng-container>
+
+                <ng-template #deletedTpl>
+                  <button class="btn-circle restore" (click)="restaurar(item.id!)">
+                    <span class="material-icons">settings_backup_restore</span>
+                  </button>
+                </ng-template>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="lightbox-overlay" *ngIf="imagenZoom" (click)="cerrarZoom()">
+    <button class="close-zoom"><span class="material-icons">close</span></button>
+
+    <div class="lightbox-content" (click)="$event.stopPropagation()">
+      <div class="zoom-box">
+        <img [src]="limpiarUrl(imagenZoom)" class="full-res-img" />
+
+        <div class="zoom-info">
+          <h4>Resultado Final</h4>
+          <p>Servicio: {{ imagenZoom.tipoServicio }} | ID: {{ imagenZoom.id }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="lightbox-overlay" *ngIf="mostrarModal" (click)="cerrarModal()">
+    <button class="close-zoom"><span class="material-icons">close</span></button>
+
+    <div class="lightbox-content modal-edit-size" (click)="$event.stopPropagation()">
+      <div class="zoom-box modal-edit-body">
+        <h3 class="modal-edit-title">
+          <span class="material-icons icon-orange">edit</span>
+          Editar Registro
+        </h3>
+
+        <div class="form-body" *ngIf="itemSeleccionado">
+          <div class="form-group-custom">
+            <label>Tipo de Servicio</label>
+            <select [(ngModel)]="itemSeleccionado.tipoServicio" class="select-custom">
+              <option value="PHOTO_TO_ANIME">PHOTO_TO_ANIME</option>
+              <option value="BACKGROUND_REMOVER">BACKGROUND_REMOVER</option>
+            </select>
+          </div>
+
+          <div class="form-group-custom">
+            <label>Ruta de la Imagen (URL)</label>
+            <input
+              type="text"
+              [(ngModel)]="itemSeleccionado.urlResultado"
+              placeholder="Ruta del resultado..."
+              class="input-custom"
+            />
+          </div>
+        </div>
+
+        <div class="modal-edit-actions">
+          <button (click)="cerrarModal()" class="btn-cancel">Cancelar</button>
+
+          <button (click)="guardarEdicion()" [disabled]="cargando()" class="btn-save">
+            <span class="material-icons">save</span>
+            {{ cargando() ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>

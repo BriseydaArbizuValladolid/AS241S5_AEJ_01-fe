@@ -9,12 +9,12 @@ import { ImageProcess } from '../interfaces/image-process.interface';
 export class ApiUnoService {
   private http = inject(HttpClient);
 
-  // Reemplaza con tu URL actual de la pestaña PORTS (puerto 8080)
   private readonly URL = 'https://congenial-disco-x59gjxprqp763pr9-8080.app.github.dev/api/v1/ia';
 
   getBaseUrl(): string {
-  return 'https://congenial-disco-x59gjxprqp763pr9-8080.app.github.dev';
-}
+    return 'https://congenial-disco-x59gjxprqp763pr9-8080.app.github.dev';
+  }
+
   getHistory(): Observable<ImageProcess[]> {
     return this.http.get<ImageProcess[]>(`${this.URL}/listar`);
   }
@@ -29,13 +29,15 @@ export class ApiUnoService {
     return this.http.post<ImageProcess>(`${this.URL}/convertir-anime?url=${url}`, {});
   }
 
-  updateRecord(id: string | undefined, data: ImageProcess): Observable<any> {
-    if (!id) throw new Error("ID no proporcionado");
-    return this.http.put(`${this.URL}/editar/${id}`, data);
+  updateRecord(id: string, data: ImageProcess): Observable<ImageProcess> {
+    return this.http.put<ImageProcess>(`${this.URL}/editar/${id}`, data);
   }
 
-  deleteLogico(id: string | undefined): Observable<any> {
-    if (!id) throw new Error("ID no proporcionado");
-    return this.http.patch(`${this.URL}/eliminar/${id}`, {});
+  deleteLogico(id: string): Observable<ImageProcess> {
+    return this.http.patch<ImageProcess>(`${this.URL}/eliminar/${id}`, {id});
+  }
+
+  restoreRecord(id: string): Observable<ImageProcess> {
+    return this.http.patch<ImageProcess>(`${this.URL}/restaurar/${id}`, {id});
   }
 }
