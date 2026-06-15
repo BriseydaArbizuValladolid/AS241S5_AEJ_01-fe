@@ -1,5 +1,3 @@
-import { DatePipeConfig } from "@angular/common";
-
 export interface ImageProcess {
   id: string;
   urlOriginal: string;
