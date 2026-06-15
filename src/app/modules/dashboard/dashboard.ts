@@ -104,8 +104,9 @@ export class DashboardComponent implements OnInit {
     });
   }
 
-  procesarFondo(event: any) {
-    const file = event.target.files[0];
+  procesarFondo(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
     if (file) {
       this.cargando.set(true);
       this.apiService.removeBackground(file).subscribe({
@@ -153,19 +154,19 @@ guardarEdicion() {
         this.cargando.set(false);
         this.cerrarModal(); // Cerramos el modal de forma limpia
       },
-      error: (err: any) => {
+      error: (err: unknown) => {
         console.error('Error al intentar editar el registro:', err);
         alert('Ocurrió un problema al guardar los cambios en la base de datos.');
         this.cargando.set(false);
       }
     });
   }
-limpiarUrl(item: any): SafeUrl {
-  if (!item) return 'assets/placeholder.png';
+limpiarUrl(item: ImageProcess): SafeUrl {
+    if (!item) return 'assets/placeholder.png';
 
-  if (item.urlResultado && item.urlResultado.startsWith('http')) {
-    return this.sanitizer.bypassSecurityTrustUrl(item.urlResultado);
-  }
+    if (item.urlResultado && item.urlResultado.startsWith('http')) {
+      return this.sanitizer.bypassSecurityTrustUrl(item.urlResultado);
+    }
 
   if (item.urlResultado === 'Error') {
     return 'assets/image-error.png';
