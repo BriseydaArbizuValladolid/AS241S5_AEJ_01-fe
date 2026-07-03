@@ -1,26 +1,16 @@
 # Etapa 1: Build
 FROM node:22-alpine AS builder
 WORKDIR /app
-
-# Copia archivos de configuración
 COPY package.json package-lock.json* ./
-
-# Instala dependencias
 RUN npm ci
-
-# Copia el código fuente
 COPY . .
-
-# Ejecutamos el build
 RUN npm run build -- --configuration=production
 
-# Etapa 2: Run (SSR)
-FROM node:22-alpine
-WORKDIR /app
+# Etapa 2: Run
+FROM nginx:1.25-alpine
 
-# Copiamos el resultado del build
-COPY --from=builder /app/dist/*/ ./dist/
+COPY --from=builder /app/dist/frontend/browser /usr/share/nginx/html
 
-EXPOSE 4000
+EXPOSE 80
 
-CMD ["node", "dist/server/server.mjs"]
+CMD ["nginx", "-g", "daemon off;"]

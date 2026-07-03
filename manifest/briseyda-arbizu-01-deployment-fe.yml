@@ -1,0 +1,23 @@
+# kubectl apply -f briseyda-arbizu-01-deployment-fe.yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: briseyda-arbizu-01-deployment-fe
+  namespace: briseyda-arbizu-01-namespace-fe
+spec:
+  replicas: 2        # Requisito estricto: 2 pods
+  selector:
+    matchLabels:
+      app: briseyda-arbizu-01-deployment-fe
+  template:
+    metadata:
+      labels:
+        app: briseyda-arbizu-01-deployment-fe
+    spec:
+      containers:
+      - name: briseyda-arbizu-01-container-fe
+        image: briseydaarbizu/ia-image-processor-fe:1.3 # Reemplaza con el nombre real de tu imagen FE
+        imagePullPolicy: IfNotPresent
+        envFrom:
+        - secretRef:
+            name: briseyda-arbizu-01-secret-fe  # Carga PORT y BACKEND_URL automáticamente

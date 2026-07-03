@@ -1,0 +1,5 @@
+# kubectl apply -f briseyda-arbizu-01-namespace-fe.yml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: briseyda-arbizu-01-namespace-fe

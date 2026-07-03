@@ -9,10 +9,10 @@ import { ImageProcess } from '../interfaces/image-process.interface';
 export class ApiUnoService {
   private http = inject(HttpClient);
 
-  private readonly URL = 'https://congenial-disco-x59gjxprqp763pr9-8080.app.github.dev/api/v1/ia';
+  private readonly URL = 'https://musical-space-chainsaw-pjg5x9w7q69ph7vww-8080.app.github.dev/api/v1/ia';
 
   getBaseUrl(): string {
-    return 'https://congenial-disco-x59gjxprqp763pr9-8080.app.github.dev';
+    return 'https://musical-space-chainsaw-pjg5x9w7q69ph7vww-8080.app.github.dev';
   }
 
   getHistory(): Observable<ImageProcess[]> {

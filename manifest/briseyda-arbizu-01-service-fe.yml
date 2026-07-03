@@ -1,0 +1,14 @@
+# kubectl apply -f briseyda-arbizu-01-service-fe.yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: briseyda-arbizu-01-service-fe
+  namespace: briseyda-arbizu-01-namespace-fe
+spec:
+  type: NodePort
+  ports:
+  - port: 30002       # Puerto que expondrá el servicio
+    targetPort: 80  # Puerto interno donde corre tu contenedor de Front-End
+    nodePort: 30002   # Puerto asignado en el nodo para probarlo en el navegador
+  selector:
+    app: briseyda-arbizu-01-deployment-fe
